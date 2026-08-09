@@ -24,18 +24,18 @@ internal static class SampleSceneSetup
         if (GameObject.Find("Environment") != null && GameObject.Find("Player") != null)
         {
             bool changed = false;
-            if (GameObject.Find("BouncyBall") == null)
-            {
-                CreateBouncyBall();
-                changed = true;
-            }
-
-            if (GameObject.Find("HairDryer") == null)
-            {
-                CreateHairDryer();
-                changed = true;
-            }
-            else if (PrepareHairDryerForGround(GameObject.Find("HairDryer")))
+            // if (GameObject.Find("BouncyBall") == null)
+            // {
+            //     CreateBouncyBall();
+            //     changed = true;
+            // }
+            //
+            // if (GameObject.Find("HairDryer") == null)
+            // {
+            //     CreateHairDryer();
+            //     changed = true;
+            // }
+            if (PrepareHairDryerForGround(GameObject.Find("HairDryer")))
             {
                 changed = true;
             }
