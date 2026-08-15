@@ -4859,6 +4859,8 @@ MonoBehaviour:
   player: {fileID: 1508537244}
   respawnPoint: {fileID: 1280315280}
   countdownSeconds: 10
+  darkZoneEnterSound: teleport
+  darkZoneSoundCooldown: 0.4
 --- !u!65 &1489408118
 BoxCollider:
   m_ObjectHideFlags: 0
