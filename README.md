@@ -7,9 +7,9 @@
 > 引擎：Unity 2022.3.62f3c1 / URP  
 > 主场景：`Assets/Scenes/LRB_Scene.unity`  
 > 整理日期：2026-10-18  
-> 口径：基于 Git `main` 分支非 merge 提交；职责按提交信息与关键文件首次创建者归纳
+> 口径：程序职责基于 Git `main` 分支非 merge 提交；美术源资产对照飞书云盘 `art` 目录（2026-10-18）与 Unity `Assets/` 入库路径归纳
 
-本文与 [Docs/团队贡献.md](./Docs/团队贡献.md) 内容一致，回答「谁做了什么」，便于路演 / 答辩追溯。玩法落地细节见 [Docs/MVP闭环修改计划.md](./Docs/MVP闭环修改计划.md)。
+本文与 [Docs/团队贡献.md](./Docs/团队贡献.md) 内容一致，回答「谁做了什么」，便于路演 / 答辩追溯。玩法落地细节见 [Docs/MVP闭环修改计划.md](./Docs/MVP闭环修改计划.md)。美术源目录与工程对照见下方 **§2.1**。
 
 ---
 
@@ -41,8 +41,58 @@ Git 昵称与真实姓名若需对外展示，请在文末「待核对」处补�
 | Retr0_Jaxon | 31 | 项目初始化、FPS/吹风机原型、王座科技树 v1、仓库集成、渲染/打包兜底 |
 | linkbgame | 30 | 椰子提交循环、LRB 场景主程、升级 UI 双轨科技树、黑暗区初版 |
 | Gogol | 2 | Jam 截止前 MVP 闭环联调（批次 A–F）与对照文档 |
+| 美术同学（无 Git 记录） | — | 飞书云盘 `art`：场景/道具模型、封面、科技树 UI、结局序列帧等源资产 |
 
-提交次数 **不等于** 贡献权重。Gogol 两次提交覆盖封面、异常 1–3、第二棵树钩子、结局回标题等横切改动。
+提交次数 **不等于** 贡献权重。Gogol 两次提交覆盖封面、异常 1–3、第二棵树钩子、结局回标题等横切改动。美术同学的产出在 Git 外（云盘），入库与挂接由程序完成，见 §2.1。
+
+---
+
+## 2.1 美术资产与云盘 art（源文件）
+
+云盘 `art` 是美术同学的**开发源目录**；本仓库 `Assets/` 是 Jam 集成后的**运行版本**。两边不必一一对应：部分云盘子文件夹尚未入库，部分工程资源已经过程序改名或拆分。
+
+- **定位**：飞书分享文件夹 [art](https://jcnwab5wfwu2.feishu.cn/drive/folder/U0oqfal5fla3ZUdlmhLcQ0j4ns3)（打开需团队权限；面试可向队伍索取）。
+- **整理日期**：2026-10-18（按云盘一级目录截图 + 当前 `main` 的 `Assets/`）。
+- **使用方式**：先在云盘看源文件命名与版本，再到下表 Unity 路径打开 Prefab / 贴图；主场景为 `Assets/Scenes/LRB_Scene.unity`。
+
+### 云盘一级目录
+
+```
+art/
+  basket/              提交篮 / 收集容器源文件
+  blower/              吹风机模型与贴图
+  coconut tree/        椰子树
+  cover/               封面
+  ending/              结局序列帧
+  icon/                图标 / HUD 用椰子图
+  one coconut/         可交互小椰子
+  paper/               纸条
+  room/                房间场景模型
+  tech tree/           升级科技树 UI
+  throne/              王座
+  未命名文件夹/        未整理或未入库
+  说明&日志&留言板     美术说明文档（仅云盘）
+```
+
+### 云盘 ↔ Unity 对照
+
+| 云盘 `art` | 资产类型 | Unity 工程路径（已入库） | 程序侧挂接（Git） |
+|------------|----------|--------------------------|-------------------|
+| `blower/` | 吹风机模型 / 贴图 | `Assets/Models/blower/`（`blower_01s.fbx`、`blower_02l.fbx` 及贴图）；`Assets/Prefabs/HairDryer*.prefab` | linkbgame 导入并挂升级链 |
+| `coconut tree/` | 椰子树 | `Assets/Models/coconut tree_03.fbx`；`Assets/Prefabs/Deco_tree.prefab` | linkbgame 生产树；ParaNoite Deco 树 |
+| `one coconut/` | 小椰子 | `Assets/Models/tiny cocona.fbx`、`cocona.png`；`Assets/Prefabs/TinyCoconut.prefab` | linkbgame 椰子链 |
+| `room/` | 房间场景 | `Assets/Models/room/`（`room.fbx`、管道 / 水面贴图） | linkbgame 搭 LRB 场景 |
+| `throne/` | 王座 | `Assets/Models/throne/`；`Assets/Prefabs/throne.prefab` | Retr0_Jaxon / linkbgame 王座交互 |
+| `paper/` | 纸条模型 | `Assets/Models/paper/`（`paper.fbx`、`paper.png`） | linkbgame 交互；ParaNoite 文案 |
+| `cover/` | 封面图 | `Assets/Images/cover.png` | Gogol 封面流程接入 |
+| `ending/` | 结局序列帧 | `Assets/Images/ending/`（`1.png`–`15.png`） | ParaNoite `SpriteAnimationPlayer` |
+| `tech tree/` | 科技树 UI 图 | `Assets/Images/UpgradeUI/`（`tech tree.png`、chosen 布局图） | linkbgame 全屏双轨科技树 |
+| `icon/` | HUD / 图标 | `Assets/Images/ccn amount.png`；`Assets/Models/ccn.png` | HUD 椰子计数 |
+| `basket/` | 提交篮源文件 | 未见独立同名模型；提交区逻辑在 `CoconutSubmitZone` / `Assets/prefabsave/` | linkbgame 提交循环 |
+| `未命名文件夹/` | 未整理 | 仓库中无对应目录 | — |
+| `说明&日志&留言板` | 美术文档 | 仅云盘，未进 Git | — |
+
+**局限：** Git 无法统计美术同学的提交次数；上表按云盘目录名与工程文件名对应，不表示「某张贴图的每一个像素版本」都已同步。以云盘为源、以 `main` 上 `Assets/` 为可运行版本。
 
 ---
 
@@ -284,4 +334,4 @@ Git 无法给场景 YAML 划清每一行。下表以 **脚本创建者 + 后续�
 | ParaNoite | 3556710584@qq.com | |
 | Gogol | 2417001696@qq.com | |
 
-无 Git 记录、但实际参与策划 / 美术 / 音效外包的成员，Git 无法统计，需人工备注。
+无 Git 记录、但实际参与策划 / 美术 / 音效外包的成员，Git 无法统计。美术同学的源目录见 **§2.1**（飞书云盘 `art`）；对外姓名请在上表或口头补全。
