@@ -2,7 +2,7 @@
 
 第一人称 3D「吹椰子 → 提交 → 双轨升级 → 读纸条 → 异常 escalation」的 Jam 向垂直切片：用锥形风力物理驱动资源循环，再用升级反哺生产与叙事。本仓同时作为 **FPS 交互 + 物理风力 + URP 后处理 + 流程门控** 的作品集展示。
 
-队伍：404 Sleep Not Found　|　[椰酱 Game Jam 2026 作品页](https://game.icon.cn/events/scnucj2026)　|　展示 fork：[linkbgame/CoCoBlow](https://github.com/linkbgame/CoCoBlow)　|　团队原仓：[Retr0-Jaxon/CoCoBlow](https://github.com/Retr0-Jaxon/CoCoBlow)
+队伍：404 Sleep Not Found　|　[椰酱 Game Jam 2026 活动页](https://game.icon.cn/events/scnucj2026)　|　展示 fork：[linkbgame/CoCoBlow](https://github.com/linkbgame/CoCoBlow)　|　团队原仓：[Retr0-Jaxon/CoCoBlow](https://github.com/Retr0-Jaxon/CoCoBlow)
 
 主场景：`Assets/Scenes/LRB_Scene.unity`（Build Settings 唯一启用场景）
 
