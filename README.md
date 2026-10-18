@@ -1,3 +1,262 @@
+﻿# CoCoBlow
+
+第一人称 3D「吹椰子 → 提交 → 双轨升级 → 读纸条 → 异常 escalation」的 Jam 向垂直切片：用锥形风力物理驱动资源循环，再用升级反哺生产与叙事。本仓同时作为 **FPS 交互 + 物理风力 + URP 后处理 + 流程门控** 的作品集展示。
+
+队伍：404 Sleep Not Found　|　[椰酱 Game Jam 2026 作品页](https://game.icon.cn/events/scnucj2026)　|　展示 fork：[linkbgame/CoCoBlow](https://github.com/linkbgame/CoCoBlow)　|　团队原仓：[Retr0-Jaxon/CoCoBlow](https://github.com/Retr0-Jaxon/CoCoBlow)
+
+主场景：`Assets/Scenes/LRB_Scene.unity`（Build Settings 唯一启用场景）
+
+---
+
+## 技术栈
+
+![Unity](https://img.shields.io/badge/Unity-2022.3.62f3c1-000000?logo=unity)
+![CSharp](https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white)
+![URP](https://img.shields.io/badge/Render%20Pipeline-URP%2014.0.12-2196F3)
+![InputSystem](https://img.shields.io/badge/Input%20System-1.14.0-6DB33F)
+![TMP](https://img.shields.io/badge/TextMeshPro-3.0.7-FF6F00)
+![Jam](https://img.shields.io/badge/椰酱%20Game%20Jam-2026-E91E63)
+
+| 层 | 实际使用 |
+|----|----------|
+| 引擎 / 渲染 | Unity **2022.3.62f3c1**（`ProjectSettings/ProjectVersion.txt`），**URP 14.0.12** |
+| 输入 | **Input System 1.14.0**（`Keyboard.current` / `Mouse.current`，非旧 Input Manager） |
+| UI | uGUI + **TextMeshPro 3.0.7** |
+| 玩法代码 | 自写 C#（约 27 个业务脚本）；`manifest.json` 里的 Timeline / Visual Scripting **未驱动核心循环** |
+| 音频 | 自研 `AudioManager` + `AudioMixer.mixer` |
+| 开发工具（可选，非运行时依赖） | Cursor IDE 包、`com.coplaydev.unity-mcp` |
+
+---
+
+## 核心特性
+
+技术含量集中在风力物理、生产上限、双轨升级与异常升级，而不是功能清单：
+
+1. **锥形风力，而不是一律 `AddForce`**  
+   `HairDryer` 在 `FixedUpdate` 用 `Physics.OverlapSphere` 粗筛，再按喷嘴方向做夹角 / 距离衰减。挂在树上的椰子走 `Coconut.ApplyWindForce`：风力按时间累积，超过阈值（脚本默认 45）才 `ReleaseFromTree`；地上刚体才施加持续力。挂树阶段另有摇晃视觉（`wobbleFrequency` 等），不改刚体。
+
+2. **生成上限只统计「还挂在树上的」椰子**  
+   `CoconutSpawner.maxActiveCoconuts` 通过 `CountAttachedCoconuts()` 只计 `IsAttached`。吹落到地、尚未进提交区的椰子不占名额，避免「地上一堆就停产」。
+
+3. **双轨升级数据驱动**  
+   `GameManager` 用两份 `UpgradeStage[]` 分开吹风机（风力 / 射程 / 锥角，可 `SwapHairDryer` 换 Prefab）和椰子树（冷却、挂树上限、`spawnExtraTree` 再 `Instantiate` 第二棵并 `RegisterSpawner`）。消耗默认按 GDD（5/12/20 与 8/15/25）；场景 Inspector 可能是联调测试值 1/2/3，**以当前场景为准**。
+
+4. **全屏节点科技树 UI（不是「点亮椰子」）**  
+   `SimplePanelUI` + `UpgradeNodeButton` + `UpgradeSubMenuLayout` + `UpgradeLayoutPreset`，按 1920×1080 参考布局切子菜单。GDD 的「每解锁一项点亮一颗椰子」明确未做。
+
+5. **升级驱动的渐进异常**  
+   `GameManager.OnHairDryerUpgradeEvent` 直接调 `AnomalyController.OnHairDryerUpgraded`。异常只加不减：落地闪 Point Light、落地后 `WaitForFixedUpdate` 再朝玩家水平冲、播 `anomaly` 音、可选 `DecoTree.TriggerRotation` 抖动（`enableAnomalyGlitch`）。落地判定在 `Coconut.OnCollisionEnter`：离树后第一次法线偏上的地面碰撞，每颗只触发一次。
+
+6. **封面 / 结局流程门控**  
+   `GameFlowController.IsBlockingGameplay` + `Time.timeScale = 0`。`FirstPersonController` 与 `HairDryer` 统一停移动 / 吹风；点「开始」才 `PickUp` 并播 `atmosphere`。读完最后一张纸条 → `SimplePanelUI.ShowEndingPanel` → `SpriteAnimationPlayer` 序列帧 → `LoadScene` 回封面。
+
+7. **黑暗区：包围盒进出，而不是只靠 Trigger 回调**  
+   `DarkZone` 每帧用 `CharacterController` 包围盒与区域 `bounds.Intersects` 判断安全区，处理反复进出；超时禁用 CharacterController 后传送回 `respawnPoint`。`SimpleHUD` 全屏纯黑 overlay，alpha 从 0.7 插到 1。
+
+8. **程序化风力范围可视化 + 编辑器一键生成**  
+   `HairDryerRangeVisual` 按 `windRange` / `windAngle` 生成 cone mesh，吹风时淡入淡出（不做粒子）。菜单 `CoCoBlow/Create Hair Dryer Range Visual Prefab`（`HairDryerRangeVisualBuilder`）生成材质与 Prefab。URP 全屏 PSX 滤镜（`PSXFullscreenRendererFeature` + `PSXFullscreen.shader`）已实现；**是否启用以当前 URP Asset 为准**（仓库历史中有过 revert）。
+
+---
+
+## 架构设计
+
+Jam 规模下选择 **单例枢纽 + 直接调用**，不引入事件总线或状态机框架。模块按「流程 / 玩法核 / 世界系统 / 基础设施」切开。
+
+```mermaid
+flowchart TB
+  subgraph flow [FlowAndUI]
+    GameFlowController
+    SimplePanelUI
+    SimpleHUD
+    SpriteAnimationPlayer
+  end
+  subgraph core [GameplayCore]
+    GameManager
+    FirstPersonController
+    HairDryer
+    CoconutSpawner
+    Coconut
+    CoconutSubmitZone
+  end
+  subgraph world [WorldSystems]
+    AnomalyController
+    DarkZone
+    ChairInteract
+    NoteInteract
+    DecoTree
+  end
+  subgraph infra [Infra]
+    AudioManager
+    PSXFullscreenRendererFeature
+  end
+  GameFlowController --> FirstPersonController
+  GameFlowController --> HairDryer
+  GameManager --> HairDryer
+  GameManager --> CoconutSpawner
+  GameManager --> SimplePanelUI
+  GameManager --> SimpleHUD
+  GameManager --> AnomalyController
+  HairDryer --> Coconut
+  CoconutSpawner --> Coconut
+  CoconutSubmitZone --> GameManager
+  AnomalyController --> Coconut
+  AnomalyController --> DecoTree
+  DarkZone --> SimpleHUD
+  ChairInteract --> SimplePanelUI
+  NoteInteract --> GameManager
+```
+
+### 目录（业务脚本）
+
+```
+Assets/Managers/          GameManager.cs, AudioManager.cs
+Assets/Scripts/
+  FirstPersonController.cs, HairDryer.cs, HairDryerRangeVisual.cs
+  KeepInsideZone.cs       早期出界方案；黑暗视野不依赖它
+  Coconut/                Coconut, CoconutSpawner, CoconutSpawnPoint, CoconutSubmitZone, DecoTree
+  Environment/            AnomalyController, DarkZone
+  Interact/               IInteractable, ChairInteract, NoteInteract
+  Rendering/              PSXFullscreenRendererFeature
+  UI/                     GameFlowController, SimpleHUD, SimplePanelUI,
+                          SpriteAnimationPlayer, UpgradeNodeButton,
+                          UpgradeSubMenuLayout, UpgradeLayoutPreset
+Assets/Editor/            HairDryerRangeVisualBuilder.cs
+```
+
+### 关键设计决策
+
+| 决策 | 选了什么 | 权衡 |
+|------|----------|------|
+| 风力模型 | 锥角 `windAngle` + 球体重叠 + 挂树累积阈值 | 不是流体、也不是 GDD「半径米」场（MVP 明确不重写）。Jam 期 Inspector / Gizmos 可调，手感稳定。 |
+| 全局状态 | `GameManager`、`GameFlowController`、`AnomalyController`、`AudioManager` 单例 | 少脚本、调用路径一眼能跟。扩展联机或热重载要拆成服务定位 / 事件。`AudioManager` 额外 `DontDestroyOnLoad`（见踩坑）。 |
+| 数值放哪 | `UpgradeStage` 代码默认走 GDD；场景可覆盖 | 手改 `LRB_Scene.unity` YAML 再 `SaveScene` 会把升级表打回旧值。发版前在 Inspector 改消耗即可，不必改代码。 |
+
+### 用了哪些模式、用在哪、为什么
+
+- **单例**：上述四个类型。Jam 周期内避免到处 `FindObjectOfType` 传引用；Awake 里仍保留查找兜底。
+- **策略式交互（接口）**：`IInteractable`（`CanInteract` / `Interact` / `GetHintText`）。`ChairInteract` 开升级面板，`NoteInteract` 读 `GameManager` 已解锁纸条。`GetHintText` 固定返回空——E 键提示文案本轮不做。射线在 `FirstPersonController.FindInteractionTargets` 里按 **纸条 → 王座 → 未手持吹风机** 优先级取具体类型，不是泛型 `GetComponent<IInteractable>()`。
+- **没有事件总线**：吹风机升级到异常是 `GameManager` 直接调 `AnomalyController.Instance`。观察者框架的解耦收益，盖不过多一个间接层的调试成本。
+- **没有状态机框架**：封面 / 游玩 / 面板 / 结局靠 `IsBlockingGameplay` 与 `SimplePanelUI.IsOpen` 布尔门控，外加 `timeScale`。足够覆盖垂直切片，Escape 暂停仍是 TODO。
+- **没有对象池**：椰子 `Instantiate` / 提交后 `Destroy`。场上同时存活数量由挂树上限约束（开局 2，强化后每棵最多 4），池化收益不明显。
+
+玩家循环（实现口径）：
+
+```
+封面 cover.png（timeScale=0，不锁鼠标，不播 atmosphere）
+  → 开始：持吹风机，进第一人称
+  → CoconutSpawner 按挂点生成（默认 5 点）
+  → HairDryer 吹落 → CoconutSubmitZone 加分并 PlayAudio3D("watered")
+  → ChairInteract 开双轨科技树
+  → 吹强化 1/2/3：异常 1/2/3（+ 可选异常 4）并解锁纸条
+  → 树强化 1/2/3：上限 4 → 冷却 1.5s → 第二棵树
+  → 出安全区：黑暗 overlay + 倒计时，超时回出生点
+  → 读最后一张纸条：序列帧结局 → 点击 LoadScene 回封面
+```
+
+---
+
+## 演示
+
+<!-- 建议素材（请自行替换占位）：
+  1. 循环 GIF：封面点开始 → 吹落椰子（注意树上摇晃）→ 吹进提交区 → 王座打开科技树 → 升级后异常落地闪光/冲向玩家
+  2. 截图：Assets/Images/cover.png（封面）
+  3. 截图：全屏双轨科技树（Assets/Images/UpgradeUI/）
+  4. 截图或短视频：黑暗区 overlay + HUD 倒计时
+  5. 短视频：Assets/Images/ending/ 序列帧结局（SpriteAnimationPlayer，24fps）
+  6. 外链：https://game.icon.cn/events/scnucj2026
+-->
+
+| 建议位置 | 放什么 |
+|----------|--------|
+| 循环演示 | `docs/demo-loop.gif`（封面 → 吹落 → 提交 → 升级 → 异常） |
+| 封面 | `Assets/Images/cover.png` |
+| 科技树 | `Assets/Images/UpgradeUI/` 下的布局图 |
+| 结局 | `Assets/Images/ending/1.png`–`15.png` 或导出短片 |
+
+---
+
+## 运行方式
+
+### 环境
+
+- Unity **2022.3.62f3c1**（中国版 hash 与 `ProjectVersion.txt` 一致即可；换小版本可能打脚本）。
+- Git 能拉 HTTPS 包：`com.unity.inputsystem`、`com.unity.render-pipelines.universal`，以及 manifest 里的 Cursor / MCP Git URL（仅编辑器）。
+
+### 打开与运行
+
+1. 克隆仓库，用 Unity Hub **Add** 项目根目录（含 `Assets/`、`Packages/`、`ProjectSettings/`）。
+2. 等 Package Manager 解析完成、脚本编译通过。
+3. 打开 **`Assets/Scenes/LRB_Scene.unity`**，点 Play。  
+   `EditorBuildSettings` 已只勾该场景；`SampleScene` / `ParaNoite` / `AreaDetectSample` / `LRB_Scene 1` 是原型或测试场景，不进 Build。
+4. 打包：File → Build Settings → 确认场景列表后 Build。RangeVisual 曾出现「编辑器与 Build 不一致」，改过后再打一包对照（见下节）。
+
+### 操作
+
+| 输入 | 行为 |
+|------|------|
+| WASD | 移动（`CharacterController`） |
+| 鼠标 | 视角；左键吹风（手持时） |
+| E | 交互王座 / 已解锁纸条；拾取地上的吹风机 |
+| G | 放下手持吹风机（向下射线找地面） |
+| 空格 | 跳跃（MVP 明确保留） |
+| Esc | 仅解锁光标，**没有完整暂停菜单**（脚本内 TODO） |
+
+调试：`GameManager` 勾选 `enableCheatMode` 后按 `O` 一次加 6 个椰子。
+
+`.gitignore` 按官方 Unity 模板忽略 `Library/`、`Logs/`、`UserSettings/`、`*.csproj` / `*.sln`。场景 / Prefab 走 Unity YAML Merge（`.gitattributes` + `Tools/UnityYAMLMergeWrapper.ps1`）。
+
+---
+
+## 性能优化 / 踩坑记录
+
+下列都是开发中真实遇到、并在代码或 [Docs/MVP闭环修改计划.md](./Docs/MVP闭环修改计划.md) 里留下解法的问题。
+
+**风力范围可视化：编辑器正常、Build 不对**  
+`HairDryerRangeVisual` 运行时生成 mesh + `MaterialPropertyBlock`。曾出现编辑器与真机包效果不一致（commit `c06c03d`）。根因在 URP 透明材质 / 运行时 mesh 在 Build 管线下的差异，而不是「没挂脚本」。对策：用编辑器菜单生成稳定 Prefab/材质，并在 Build 包里对照吹风淡入。
+
+**提交区 Trigger 顶面埋地，进池不加分**  
+`CoconutSubmitZone` 只在 `OnTriggerEnter` 里 `MarkSubmitted` + `AddCoconut` 然后 `Destroy`。Collider 顶面埋进地面时 Trigger 打不到。把提交池 BoxCollider 抬到地面以上后恢复。
+
+**刚吹落又被同一阵风吸飞**  
+`Coconut.ReleaseFromTree` 后设 `windIgnoreUntilTime`（`windIgnoreDurationAfterRelease`，默认 0.3s）。`HairDryer` 对 `!CanReceiveWindForce` 的椰子跳过施力。
+
+**异常 2 的冲量被落地弹跳盖掉**  
+先等一帧 `WaitForFixedUpdate`，再设水平 `velocity`、清角速度，避免落地反弹覆盖冲向玩家的速度。
+
+**树 Scale 0.2 后，挂树椰子视觉缩小**  
+`AttachToTree` 用父物体 `lossyScale` 做 `ApplyCompensatedLocalScale`，掉落后世界大小与树上一致。树实例 Scale 0.2、`TinyCoconut` 约 0.306（相对身高 2 的 CharacterController）。
+
+**场景 YAML 合并把升级表打回旧值**  
+多人改 `LRB_Scene.unity` 时，手改 YAML 再在编辑器 Save 会覆盖升级消耗。工程侧用 Unity Smart Merge；数值改动优先走 Inspector。
+
+**`AudioManager` 的 `DontDestroyOnLoad`**  
+单例 `PatternSingleton()` 会跨场景存活。MVP 选择不改这个行为，改为封面 `StopAllAudio`、点开始再播 `atmosphere`，结局 `LoadScene` 回标题时靠停 loop 音规避「两层 BGM」。
+
+**性能口径（诚实）**  
+- 椰子生命周期是 `Instantiate` / `Destroy`，没有对象池。  
+- `HairDryer.FixedUpdate` 每次吹风 `OverlapSphere` 全层检测，无 `LayerMask`、会分配 `Collider[]`。Jam 场上刚体数量可控，可接受；量产应改 NonAlloc + 椰子层。  
+- `AnomalyController` 触发异常 4 时 `FindObjectsOfType<DecoTree>()`，只在升级瞬间跑一次。
+
+---
+
+## 未来计划 / 已知局限
+
+来自 MVP「本轮明确不做」与代码 TODO，**不要当成已实现**：
+
+- 纸条解密、运输、种植；科技树「点亮椰子」；把风力改成半径米物理。
+- 去掉跳跃、E 键世界空间提示文案、改挂点数量（保持 5）。
+- `FirstPersonController`：Escape 暂停光标逻辑未完成；落地 `verticalVelocity = -2f` 旁有待复核注释。
+- 无存档、无联机、无正式暂停菜单。
+- `KeepInsideZone` 是早期出界传送方案，当前黑暗体验走 `DarkZone`，两者并行存在。
+
+玩法落地对照（计划 vs 实现）见 [Docs/MVP闭环修改计划.md](./Docs/MVP闭环修改计划.md)。谁改了哪条脚本见下方附录，或 [Docs/团队贡献.md](./Docs/团队贡献.md)。
+
+---
+
+## 附录：团队分工与贡献追溯
+
+以下为原 README 全文，未改写。口径仍是 Git `main` 非 merge 提交 + 美术云盘对照，供路演 / 答辩追溯。
+
 # CoCoBlow — 项目说明与团队分工
 
 > 队伍：404 Sleep Not Found  
